@@ -62,8 +62,6 @@
   .status-btns button.current{background:var(--stone-900); color:#fff; border-color:var(--stone-900);}
   .detail-grid{display:grid; grid-template-columns:1fr 1fr; gap:4px 16px; margin-top:10px; font-size:13px;}
   .detail-grid .k{color:var(--stone-600); font-weight:600;}
-  #print-area{display:none;}
-  @media print{ body *{visibility:hidden;} #print-area, #print-area *{visibility:visible;} #print-area{display:block; position:absolute; top:0; left:0;} }
   @media (max-width:520px){ .row3{grid-template-columns:1fr 1fr;} }
 </style>
 </head>
@@ -159,7 +157,7 @@
   </section>
 </main>
 
-<div id="print-area"></div>
+
 
 <script>
 let SLABS = [];
@@ -433,10 +431,30 @@ async function saveSplitRemnant(parentId){
   }
 }
 function printLabel(id){
-  const area = document.getElementById('print-area');
-  area.innerHTML = `<div style="padding:20px; font-family:sans-serif;"><div style="font-size:11px; text-transform:uppercase; letter-spacing:1px;">Peak Stoneworkz</div><svg id="barcode-svg-print"></svg></div>`;
-  JsBarcode('#barcode-svg-print', id, {format:'CODE128', height:60, width:2.5, fontSize:16, margin:8});
-  window.print();
+  const tempSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  document.body.appendChild(tempSvg);
+  JsBarcode(tempSvg, id, {format:'CODE128', height:60, width:2.5, fontSize:16, margin:8});
+  const svgMarkup = tempSvg.outerHTML;
+  document.body.removeChild(tempSvg);
+
+  const printWindow = window.open('', '_blank');
+  if(!printWindow){
+    alert('Your browser blocked the print pop-up. Please allow pop-ups for this site and try again.');
+    return;
+  }
+  printWindow.document.write(`
+    <!DOCTYPE html><html><head><title>${id} — Peak Stoneworkz</title>
+    <style>
+      body{font-family:sans-serif; padding:24px; text-align:center;}
+      .brand{font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#555; margin-bottom:10px;}
+    </style></head>
+    <body>
+      <div class="brand">Peak Stoneworkz</div>
+      ${svgMarkup}
+      <script>window.onload = function(){ window.print(); };</script>
+    </body></html>
+  `);
+  printWindow.document.close();
 }
 
 // ---------- Scan tab ----------
