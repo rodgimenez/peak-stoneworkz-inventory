@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Peak Stoneworkz — Slab Inventory</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/JsBarcode/3.11.5/JsBarcode.all.min.js"></script>
+<style>
+  :root{
+    --stone-900:#211f1c; --stone-800:#2c2925; --stone-600:#5b564d;
+    --quartz-100:#f2ece0; --quartz-50:#f8f5ef;
+    --copper:#b8703f; --copper-dark:#8f5630; --slate:#5c6b73;
+    --ok:#4c7a53; --warn:#b8873f; --sold:#8f4a3f; --line:#dcd4c4;
+    --font-display:'Zilla Slab', Georgia, serif;
+    --font-body:'Inter', -apple-system, sans-serif;
+    --font-mono:'JetBrains Mono', 'Courier New', monospace;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:var(--font-body); background:var(--quartz-50); color:var(--stone-900); -webkit-tap-highlight-color:transparent;}
+  header{background:var(--stone-900); color:var(--quartz-100); padding:18px 20px 16px; border-bottom:4px solid var(--copper);}
+  header .brand{display:flex; align-items:baseline; gap:10px;}
+  header .brand .mark{width:12px;height:28px;background:linear-gradient(180deg,var(--copper),var(--copper-dark)); transform:skewX(-8deg); flex-shrink:0;}
+  header h1{font-family:var(--font-display); font-weight:700; font-size:22px; margin:0; letter-spacing:0.3px;}
+  header .sub{font-size:12px; color:#c9c1af; margin-top:4px; letter-spacing:0.4px; text-transform:uppercase;}
+  nav{display:flex; background:var(--stone-800); position:sticky; top:0; z-index:10;}
+  nav button{flex:1; padding:13px 4px; background:none; border:none; color:#b8b2a4; font-family:var(--font-body); font-weight:600; font-size:13px; cursor:pointer; border-bottom:3px solid transparent;}
+  nav button.active{color:var(--quartz-100); border-bottom-color:var(--copper);}
+  main{max-width:900px; margin:0 auto; padding:16px; padding-bottom:60px;}
+  section{display:none;} section.active{display:block;}
+  .card{background:#fff; border:1px solid var(--line); border-radius:2px; padding:16px; margin-bottom:14px;}
+  h2{font-family:var(--font-display); font-size:17px; margin:0 0 12px; color:var(--stone-900);}
+  label{display:block; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.4px; color:var(--stone-600); margin:10px 0 4px;}
+  input, select, textarea{width:100%; padding:10px 11px; border:1px solid var(--line); border-radius:2px; font-family:var(--font-body); font-size:15px; background:var(--quartz-50); color:var(--stone-900);}
+  input:focus, select:focus, textarea:focus{outline:2px solid var(--copper); outline-offset:1px;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
+  button.btn{font-family:var(--font-body); font-weight:600; font-size:14px; padding:11px 18px; border-radius:2px; border:none; cursor:pointer;}
+  .btn-primary{background:var(--copper); color:#fff;} .btn-primary:hover{background:var(--copper-dark);}
+  .btn-ghost{background:none; border:1px solid var(--stone-600); color:var(--stone-800);}
+  .btn-block{width:100%; margin-top:14px;} .btn-row{display:flex; gap:8px; flex-wrap:wrap;}
+  .id-preview{font-family:var(--font-mono); font-size:20px; font-weight:700; letter-spacing:1px; background:var(--stone-900); color:var(--quartz-100); padding:10px 14px; border-radius:2px; display:inline-block; margin-top:6px;}
+  .search-bar{display:flex; gap:8px; margin-bottom:12px;} .search-bar input{flex:1;}
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th{text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.4px; color:var(--stone-600); padding:8px 6px; border-bottom:2px solid var(--stone-900);}
+  td{padding:9px 6px; border-bottom:1px solid var(--line); vertical-align:top;}
+  tr.row-click{cursor:pointer;} tr.row-click:hover{background:var(--quartz-100);}
+  .tag{display:inline-block; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.3px; color:#fff;}
+  .tag-instock{background:var(--ok);} .tag-reserved{background:var(--warn);} .tag-sold{background:var(--sold);}
+  .tag-fabricated{background:var(--slate);} .tag-remnant{background:var(--stone-600);}
+  #reader{width:100%; border-radius:2px; overflow:hidden; border:1px solid var(--line);}
+  .scan-result{margin-top:14px; padding:14px; border:2px solid var(--copper); border-radius:2px; background:var(--quartz-100);}
+  .scan-result .rid{font-family:var(--font-mono); font-weight:700; font-size:18px;}
+  .empty-state{text-align:center; padding:40px 20px; color:var(--stone-600);}
+  .empty-state .big{font-family:var(--font-display); font-size:16px; color:var(--stone-800); margin-bottom:6px;}
+  .hint{font-size:12px; color:var(--stone-600); margin-top:4px; line-height:1.5;}
+  .badge-count{font-family:var(--font-mono); font-size:12px; background:var(--stone-900); color:var(--quartz-100); padding:2px 8px; border-radius:20px; margin-left:8px;}
+  .divider{border:none; border-top:1px solid var(--line); margin:16px 0;}
+  .status-btns{display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;}
+  .status-btns button{font-size:12px; padding:7px 12px; border-radius:20px; border:1px solid var(--stone-600); background:#fff; cursor:pointer; font-weight:600;}
+  .status-btns button.current{background:var(--stone-900); color:#fff; border-color:var(--stone-900);}
+  .detail-grid{display:grid; grid-template-columns:1fr 1fr; gap:4px 16px; margin-top:10px; font-size:13px;}
+  .detail-grid .k{color:var(--stone-600); font-weight:600;}
+  #print-area{display:none;}
+  @media print{ body *{visibility:hidden;} #print-area, #print-area *{visibility:visible;} #print-area{display:block; position:absolute; top:0; left:0;} }
+  @media (max-width:520px){ .row3{grid-template-columns:1fr 1fr;} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><div class="mark"></div><h1>Peak Stoneworkz</h1></div>
+  <div class="sub">Slab Inventory — Standalone</div>
+</header>
+
+<nav>
+  <button class="tab-btn active" data-tab="inventory">Inventory</button>
+  <button class="tab-btn" data-tab="add">Add Slab</button>
+  <button class="tab-btn" data-tab="scan">Scan</button>
+</nav>
+
+<main>
+  <section id="tab-inventory" class="active">
+    <div class="card">
+      <div class="search-bar">
+        <input type="text" id="search-input" placeholder="Search material, lot, ID, location...">
+        <select id="filter-status" style="max-width:150px;">
+          <option value="">All status</option>
+          <option>In Stock</option><option>Reserved</option><option>Sold</option>
+          <option>Fabricated</option><option>Remnant</option>
+        </select>
+      </div>
+      <div id="inventory-list"><div class="hint">Loading from your sheet...</div></div>
+    </div>
+  </section>
+
+  <section id="tab-add">
+    <div class="card">
+      <h2>New Slab Intake</h2>
+      <label>Slab ID (barcode value)</label>
+      <div class="btn-row" style="margin-bottom:6px;">
+        <button class="btn btn-ghost" id="btn-gen-id" type="button">Auto-generate</button>
+        <button class="btn btn-ghost" id="btn-scan-for-id" type="button">Scan existing barcode</button>
+      </div>
+      <input type="text" id="f-id" placeholder="e.g. PSW-000101" style="font-family:var(--font-mono);">
+      <div id="add-barcode-preview" style="margin-top:10px;"></div>
+      <hr class="divider">
+      <div class="row2">
+        <div><label>Material</label><input type="text" id="f-material" placeholder="Cristallo Quartzite"></div>
+        <div><label>Lot / Block #</label><input type="text" id="f-lot" placeholder="LOT-2201"></div>
+      </div>
+      <div class="row3">
+        <div><label>Length (in)</label><input type="number" id="f-length" placeholder="126"></div>
+        <div><label>Width (in)</label><input type="number" id="f-width" placeholder="63"></div>
+        <div><label>Thickness (cm)</label><input type="number" id="f-thickness" step="0.5" placeholder="3"></div>
+      </div>
+      <div class="row2">
+        <div><label>Grade / Tier</label>
+          <select id="f-grade"><option value="">—</option><option>Standard</option><option>Luxury</option></select>
+        </div>
+        <div><label>Location</label><input type="text" id="f-location" placeholder="Rack A-3"></div>
+      </div>
+      <div class="row2">
+        <div><label>Cost Basis ($)</label><input type="number" id="f-cost" placeholder="1450"></div>
+        <div><label>List Price ($)</label><input type="number" id="f-price" placeholder="2600"></div>
+      </div>
+      <div class="row2">
+        <div><label>Vendor</label><input type="text" id="f-vendor" placeholder="Alliance Cristallo"></div>
+        <div><label>PO Reference</label><input type="text" id="f-po" placeholder="PO-0042"></div>
+      </div>
+      <label>Date Received</label>
+      <input type="date" id="f-date">
+      <label>Notes</label>
+      <textarea id="f-notes" rows="2" placeholder="Veining, damage, hold reason..."></textarea>
+      <button class="btn btn-primary btn-block" id="btn-save-slab" type="button">Save Slab to Sheet</button>
+      <div id="add-status" class="hint"></div>
+    </div>
+  </section>
+
+  <section id="tab-scan">
+    <div class="card">
+      <h2>Scan a Slab</h2>
+      <div class="hint" style="margin-bottom:10px;">Point the camera at a printed barcode label. If camera access isn't available, type the ID below instead.</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-start-scan" type="button">Start Camera</button>
+        <button class="btn btn-ghost" id="btn-stop-scan" type="button" style="display:none;">Stop Camera</button>
+      </div>
+      <div id="reader" style="margin-top:12px; display:none;"></div>
+      <div class="hint" id="scan-error"></div>
+      <hr class="divider">
+      <label>Or enter ID manually</label>
+      <div class="btn-row">
+        <input type="text" id="manual-scan-id" placeholder="PSW-000101" style="font-family:var(--font-mono);">
+        <button class="btn btn-ghost" id="btn-manual-lookup" type="button">Look Up</button>
+      </div>
+      <div id="scan-result-area"></div>
+    </div>
+  </section>
+</main>
+
+<div id="print-area"></div>
+
+<script>
+let SLABS = [];
+let html5QrCode = null;
+let scanMode = 'lookup';
+
+// ---------- Server bridge ----------
+// Paste your deployed Apps Script Web App URL below (ends in /exec).
+// Deploy > Manage deployments > New version after updating Code.gs, then copy that URL here.
+const API_URL = 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
+
+async function runServer(fnName, ...args){
+  if(fnName === 'getAllSlabs'){
+    const res = await fetch(API_URL + '?action=list');
+    if(!res.ok) throw new Error('Network error ' + res.status);
+    return res.json();
+  }
+  if(fnName === 'addSlab'){
+    const res = await fetch(API_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'}, // avoids a CORS preflight
+      body: JSON.stringify({action:'add', slab: args[0]})
+    });
+    const data = await res.json();
+    if(!data.ok) throw new Error(data.error || 'Failed to add slab');
+    return data;
+  }
+  if(fnName === 'updateSlabStatus'){
+    const res = await fetch(API_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'updateStatus', id: args[0], status: args[1]})
+    });
+    const data = await res.json();
+    if(!data.ok) throw new Error(data.error || 'Failed to update status');
+    return data;
+  }
+  throw new Error('Unknown server function: ' + fnName);
+}
+
+async function loadSlabs(){
+  try{
+    SLABS = await runServer('getAllSlabs');
+  }catch(e){
+    document.getElementById('inventory-list').innerHTML =
+      '<div class="empty-state"><div class="big">Could not load sheet</div><div>' + e + '</div></div>';
+    return;
+  }
+  renderInventory();
+}
+
+// ---------- Tabs ----------
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('main section').forEach(s=>s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab !== 'scan') stopScanner();
+  });
+});
+
+// ---------- ID generation ----------
+function nextSlabId(){
+  const nums = SLABS.map(s=>{ const m = String(s.id).match(/PSW-(\d+)/); return m ? parseInt(m[1],10) : 0; });
+  const next = (nums.length ? Math.max(...nums) : 100) + 1;
+  return 'PSW-' + String(next).padStart(6,'0');
+}
+document.getElementById('btn-gen-id').addEventListener('click', ()=>{
+  document.getElementById('f-id').value = nextSlabId();
+  renderAddBarcodePreview();
+});
+document.getElementById('f-id').addEventListener('input', renderAddBarcodePreview);
+function renderAddBarcodePreview(){
+  const val = document.getElementById('f-id').value.trim();
+  const el = document.getElementById('add-barcode-preview');
+  if(!val){ el.innerHTML=''; return; }
+  el.innerHTML = '<svg id="barcode-svg-add"></svg>';
+  try{ JsBarcode('#barcode-svg-add', val, {format:'CODE128', height:50, width:2, fontSize:14, margin:6}); }catch(e){}
+}
+
+// ---------- Save slab ----------
+document.getElementById('btn-save-slab').addEventListener('click', async ()=>{
+  const id = document.getElementById('f-id').value.trim();
+  const statusEl = document.getElementById('add-status');
+  if(!id){ statusEl.style.color='var(--sold)'; statusEl.textContent='Slab ID is required — auto-generate or scan one.'; return; }
+
+  const slab = {
+    id,
+    material: document.getElementById('f-material').value.trim(),
+    lot: document.getElementById('f-lot').value.trim(),
+    length: document.getElementById('f-length').value,
+    width: document.getElementById('f-width').value,
+    thickness: document.getElementById('f-thickness').value,
+    grade: document.getElementById('f-grade').value,
+    location: document.getElementById('f-location').value.trim(),
+    cost: document.getElementById('f-cost').value,
+    price: document.getElementById('f-price').value,
+    vendor: document.getElementById('f-vendor').value.trim(),
+    po: document.getElementById('f-po').value.trim(),
+    dateReceived: document.getElementById('f-date').value,
+    notes: document.getElementById('f-notes').value.trim(),
+    status: 'In Stock',
+    parentId: ''
+  };
+
+  statusEl.style.color='var(--stone-600)'; statusEl.textContent='Saving...';
+  try{
+    await runServer('addSlab', slab);
+    statusEl.style.color='var(--ok)'; statusEl.textContent='Saved ' + id + ' to the sheet.';
+    ['f-id','f-material','f-lot','f-length','f-width','f-thickness','f-cost','f-price','f-vendor','f-po','f-notes'].forEach(fid=>document.getElementById(fid).value='');
+    document.getElementById('f-grade').value=''; document.getElementById('f-date').value='';
+    document.getElementById('add-barcode-preview').innerHTML='';
+    await loadSlabs();
+  }catch(e){
+    statusEl.style.color='var(--sold)'; statusEl.textContent='Error: ' + e;
+  }
+});
+
+// ---------- Inventory list ----------
+function statusTagClass(status){
+  return {'In Stock':'tag-instock','Reserved':'tag-reserved','Sold':'tag-sold','Fabricated':'tag-fabricated','Remnant':'tag-remnant'}[status] || 'tag-instock';
+}
+function renderInventory(){
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const filterStatus = document.getElementById('filter-status').value;
+  const list = document.getElementById('inventory-list');
+  let filtered = SLABS.filter(s=>{
+    const matchesQ = !q || [s.id,s.material,s.lot,s.location,s.vendor].join(' ').toLowerCase().includes(q);
+    const matchesStatus = !filterStatus || s.status === filterStatus;
+    return matchesQ && matchesStatus;
+  }).sort((a,b)=> (a.id < b.id ? 1 : -1));
+
+  if(filtered.length === 0){
+    list.innerHTML = `<div class="empty-state"><div class="big">No slabs yet</div><div>Add your first slab, or adjust your search.</div></div>`;
+    return;
+  }
+  let rows = filtered.map(s=>`
+    <tr class="row-click" data-id="${escapeHtml(s.id)}">
+      <td style="font-family:var(--font-mono); font-weight:700;">${escapeHtml(s.id)}</td>
+      <td>${escapeHtml(s.material||'—')}<br><span style="color:var(--stone-600); font-size:11px;">Lot ${escapeHtml(s.lot||'—')}</span></td>
+      <td>${escapeHtml(s.length||'?')}×${escapeHtml(s.width||'?')}"  ·  ${escapeHtml(s.thickness||'?')}cm</td>
+      <td>${escapeHtml(s.location||'—')}</td>
+      <td><span class="tag ${statusTagClass(s.status)}">${escapeHtml(s.status)}</span></td>
+    </tr>`).join('');
+  list.innerHTML = `
+    <div class="hint" style="margin-bottom:8px;">${filtered.length} slab${filtered.length===1?'':'s'} <span class="badge-count">${SLABS.length} total</span></div>
+    <table><thead><tr><th>ID</th><th>Material / Lot</th><th>Dims</th><th>Location</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
+  list.querySelectorAll('tr.row-click').forEach(tr=> tr.addEventListener('click', ()=> openSlabDetail(tr.dataset.id, 'inventory')));
+}
+document.getElementById('search-input').addEventListener('input', renderInventory);
+document.getElementById('filter-status').addEventListener('change', renderInventory);
+function escapeHtml(str){ if(str===undefined||str===null) return ''; return String(str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ---------- Slab detail ----------
+function openSlabDetail(id, context){
+  const slab = SLABS.find(s=>s.id===id);
+  if(!slab) return;
+  const html = buildDetailHtml(slab);
+  if(context === 'scan'){
+    document.getElementById('scan-result-area').innerHTML = html;
+    bindDetailEvents(slab.id);
+  } else {
+    const list = document.getElementById('inventory-list');
+    const wrap = document.createElement('div');
+    wrap.className = 'scan-result';
+    wrap.innerHTML = '<button class="btn btn-ghost" id="close-detail" type="button" style="float:right;">Close</button>' + html;
+    list.prepend(wrap);
+    document.getElementById('close-detail').addEventListener('click', renderInventory);
+    bindDetailEvents(slab.id);
+  }
+}
+function buildDetailHtml(slab){
+  return `
+    <div class="rid">${escapeHtml(slab.id)}</div>
+    <div class="detail-grid">
+      <div class="k">Material</div><div>${escapeHtml(slab.material||'—')}</div>
+      <div class="k">Lot</div><div>${escapeHtml(slab.lot||'—')}</div>
+      <div class="k">Dimensions</div><div>${escapeHtml(slab.length||'?')}×${escapeHtml(slab.width||'?')}"  ·  ${escapeHtml(slab.thickness||'?')}cm</div>
+      <div class="k">Grade</div><div>${escapeHtml(slab.grade||'—')}</div>
+      <div class="k">Location</div><div>${escapeHtml(slab.location||'—')}</div>
+      <div class="k">Cost / List</div><div>$${escapeHtml(slab.cost||'0')} / $${escapeHtml(slab.price||'0')}</div>
+      <div class="k">Vendor</div><div>${escapeHtml(slab.vendor||'—')}</div>
+      <div class="k">PO Ref</div><div>${escapeHtml(slab.po||'—')}</div>
+      <div class="k">Received</div><div>${escapeHtml(slab.dateReceived||'—')}</div>
+      ${slab.parentId ? `<div class="k">Split From</div><div style="font-family:var(--font-mono);">${escapeHtml(slab.parentId)}</div>` : ''}
+      ${slab.notes ? `<div class="k">Notes</div><div>${escapeHtml(slab.notes)}</div>` : ''}
+    </div>
+    <div class="status-btns" id="status-btns-${cssId(slab.id)}">
+      ${['In Stock','Reserved','Fabricated','Sold','Remnant'].map(st=>`<button data-status="${st}" class="${slab.status===st?'current':''}">${st}</button>`).join('')}
+    </div>
+    <div class="btn-row" style="margin-top:12px;">
+      <button class="btn btn-ghost" data-print="${escapeHtml(slab.id)}" type="button">Print Label</button>
+      <button class="btn btn-ghost" data-split="${escapeHtml(slab.id)}" type="button">Split Off Remnant</button>
+    </div>
+    <div id="split-form-${cssId(slab.id)}"></div>`;
+}
+function buildSplitFormHtml(parent){
+  return `
+    <div style="margin-top:12px; padding-top:12px; border-top:1px dashed var(--stone-600);">
+      <label>Remnant Length (in)</label><input type="number" id="r-length-${cssId(parent.id)}" placeholder="42">
+      <label>Remnant Width (in)</label><input type="number" id="r-width-${cssId(parent.id)}" placeholder="28">
+      <label>Thickness (cm)</label><input type="number" id="r-thickness-${cssId(parent.id)}" step="0.5" value="${escapeHtml(parent.thickness||'')}">
+      <label>Location</label><input type="text" id="r-location-${cssId(parent.id)}" placeholder="Remnant Rack 1">
+      <label>List Price ($)</label><input type="number" id="r-price-${cssId(parent.id)}" placeholder="150">
+      <div class="hint" style="margin:6px 0 10px;">Material, lot, and grade are carried over from ${escapeHtml(parent.id)} automatically. Cost basis defaults to $0.</div>
+      <button class="btn btn-primary" data-save-split="${escapeHtml(parent.id)}" type="button">Save Remnant</button>
+      <div class="hint" id="split-status-${cssId(parent.id)}"></div>
+    </div>`;
+}
+function nextRemnantId(parentId){
+  const siblings = SLABS.filter(s => s.parentId === parentId);
+  const nums = siblings.map(s=>{ const m = String(s.id).match(/-R(\d+)$/); return m ? parseInt(m[1],10) : 0; });
+  const next = (nums.length ? Math.max(...nums) : 0) + 1;
+  return parentId + '-R' + next;
+}
+function cssId(id){ return String(id).replace(/[^a-zA-Z0-9]/g,''); }
+function bindDetailEvents(slabId){
+  document.querySelectorAll(`#status-btns-${cssId(slabId)} button`).forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      btn.disabled = true;
+      try{
+        await runServer('updateSlabStatus', slabId, btn.dataset.status);
+        await loadSlabs();
+        openSlabDetail(slabId, document.getElementById('tab-scan').classList.contains('active') ? 'scan' : 'inventory');
+      }catch(e){ alert('Error updating status: ' + e); }
+    });
+  });
+  document.querySelectorAll('[data-print]').forEach(btn=> btn.addEventListener('click', ()=> printLabel(btn.dataset.print)));
+  document.querySelectorAll('[data-split]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const parent = SLABS.find(s=>s.id===btn.dataset.split);
+      const holder = document.getElementById('split-form-'+cssId(parent.id));
+      holder.innerHTML = holder.innerHTML ? '' : buildSplitFormHtml(parent);
+      if(holder.innerHTML){
+        document.querySelector(`[data-save-split="${parent.id}"]`).addEventListener('click', ()=> saveSplitRemnant(parent.id));
+      }
+    });
+  });
+}
+async function saveSplitRemnant(parentId){
+  const parent = SLABS.find(s=>s.id===parentId);
+  const cid = cssId(parentId);
+  const statusEl = document.getElementById('split-status-'+cid);
+  const remnant = {
+    id: nextRemnantId(parentId),
+    material: parent.material,
+    lot: parent.lot,
+    length: document.getElementById('r-length-'+cid).value,
+    width: document.getElementById('r-width-'+cid).value,
+    thickness: document.getElementById('r-thickness-'+cid).value,
+    grade: parent.grade,
+    location: document.getElementById('r-location-'+cid).value,
+    cost: 0,
+    price: document.getElementById('r-price-'+cid).value,
+    vendor: parent.vendor,
+    po: parent.po,
+    dateReceived: new Date().toISOString().slice(0,10),
+    notes: 'Remnant split from ' + parentId,
+    status: 'Remnant',
+    parentId: parentId
+  };
+  statusEl.style.color='var(--stone-600)'; statusEl.textContent='Saving...';
+  try{
+    await runServer('addSlab', remnant);
+    await loadSlabs();
+    statusEl.style.color='var(--ok)';
+    openSlabDetail(parentId, document.getElementById('tab-scan').classList.contains('active') ? 'scan' : 'inventory');
+  }catch(e){
+    statusEl.style.color='var(--sold)'; statusEl.textContent='Error: ' + e;
+  }
+}
+function printLabel(id){
+  const area = document.getElementById('print-area');
+  area.innerHTML = `<div style="padding:20px; font-family:sans-serif;"><div style="font-size:11px; text-transform:uppercase; letter-spacing:1px;">Peak Stoneworkz</div><svg id="barcode-svg-print"></svg></div>`;
+  JsBarcode('#barcode-svg-print', id, {format:'CODE128', height:60, width:2.5, fontSize:16, margin:8});
+  window.print();
+}
+
+// ---------- Scan tab ----------
+document.getElementById('btn-start-scan').addEventListener('click', ()=>{ scanMode='lookup'; startScanner(); });
+document.getElementById('btn-scan-for-id').addEventListener('click', ()=>{
+  document.querySelector('.tab-btn[data-tab="scan"]').click(); scanMode='assign-id'; startScanner();
+});
+document.getElementById('btn-stop-scan').addEventListener('click', stopScanner);
+function startScanner(){
+  const readerEl = document.getElementById('reader'); const errEl = document.getElementById('scan-error');
+  errEl.textContent=''; readerEl.style.display='block';
+  document.getElementById('btn-start-scan').style.display='none';
+  document.getElementById('btn-stop-scan').style.display='inline-block';
+  html5QrCode = new Html5Qrcode('reader');
+  html5QrCode.start({ facingMode:'environment' }, { fps:10, qrbox:{width:260,height:140} },
+    (decodedText)=>{ handleScanSuccess(decodedText); },
+    ()=>{}
+  ).catch(err=>{
+    errEl.style.color='var(--sold)';
+    errEl.textContent='Camera unavailable (' + err + '). Use manual entry below instead.';
+    readerEl.style.display='none';
+    document.getElementById('btn-start-scan').style.display='inline-block';
+    document.getElementById('btn-stop-scan').style.display='none';
+  });
+}
+function stopScanner(){
+  if(html5QrCode){ html5QrCode.stop().then(()=>{ html5QrCode.clear(); html5QrCode=null; }).catch(()=>{}); }
+  document.getElementById('reader').style.display='none';
+  document.getElementById('btn-start-scan').style.display='inline-block';
+  document.getElementById('btn-stop-scan').style.display='none';
+}
+function handleScanSuccess(code){
+  if(scanMode==='assign-id'){
+    document.getElementById('f-id').value = code; renderAddBarcodePreview();
+    stopScanner(); document.querySelector('.tab-btn[data-tab="add"]').click();
+  } else {
+    stopScanner(); lookupAndShow(code);
+  }
+}
+document.getElementById('btn-manual-lookup').addEventListener('click', ()=>{
+  const id = document.getElementById('manual-scan-id').value.trim();
+  if(id) lookupAndShow(id);
+});
+function lookupAndShow(id){
+  const slab = SLABS.find(s=> String(s.id).toLowerCase() === id.toLowerCase());
+  const area = document.getElementById('scan-result-area');
+  if(!slab){
+    area.innerHTML = `<div class="scan-result" style="border-color:var(--sold);">No slab found for <span class="rid">${escapeHtml(id)}</span>. Check the ID or add it as a new slab.</div>`;
+    return;
+  }
+  area.innerHTML = '<div class="scan-result"></div>';
+  area.querySelector('.scan-result').innerHTML = buildDetailHtml(slab);
+  bindDetailEvents(slab.id);
+}
+
+// ---------- Init ----------
+loadSlabs();
+</script>
+</body>
+</html>
