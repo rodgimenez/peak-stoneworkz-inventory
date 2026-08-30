@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-<title>Peak Stoneworkz3 — Slab Inventory</title>
+<title>Peak Stoneworkz — Slab Inventory</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/JsBarcode/3.11.5/JsBarcode.all.min.js"></script>
 <style>
@@ -63,12 +63,19 @@
   .detail-grid{display:grid; grid-template-columns:1fr 1fr; gap:4px 16px; margin-top:10px; font-size:13px;}
   .detail-grid .k{color:var(--stone-600); font-weight:600;}
   @media (max-width:520px){ .row3{grid-template-columns:1fr 1fr;} }
+  .label-modal{
+    position:fixed; inset:0; background:rgba(33,31,28,0.94); z-index:100;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px;
+  }
+  .label-modal img{max-width:92%; max-height:60vh; border-radius:4px; box-shadow:0 6px 24px rgba(0,0,0,0.4);}
+  .label-modal .modal-hint{color:var(--quartz-100); font-size:13px; margin:16px 0; text-align:center; max-width:320px; line-height:1.5;}
+  .label-modal button{background:var(--copper); color:#fff;}
 </style>
 </head>
 <body>
 
 <header>
-  <div class="brand"><div class="mark"></div><h1>Peak Stoneworkz</h1></div>
+  <div class="brand"><div class="mark"></div><h1>Peak Stoneworkz4</h1></div>
   <div class="sub">Slab Inventory — Standalone</div>
 </header>
 
@@ -431,49 +438,39 @@ async function saveSplitRemnant(parentId){
   }
 }
 function printLabel(id){
-  const tempSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  document.body.appendChild(tempSvg);
-  JsBarcode(tempSvg, id, {format:'CODE128', height:80, width:3, fontSize:18, margin:10});
-  const svgMarkup = new XMLSerializer().serializeToString(tempSvg);
-  const svgWidth = tempSvg.viewBox.baseVal.width || tempSvg.getBBox().width;
-  const svgHeight = tempSvg.viewBox.baseVal.height || tempSvg.getBBox().height;
-  document.body.removeChild(tempSvg);
+  // JsBarcode renders directly to a canvas synchronously (no image-loading delay),
+  // which matters on mobile: any step that isn't synchronous with the tap can lose
+  // the "this came from a real user action" permission Safari/Chrome require.
+  const barcodeCanvas = document.createElement('canvas');
+  JsBarcode(barcodeCanvas, id, {format:'CODE128', height:80, width:3, fontSize:18, margin:10});
 
-  const svgBlob = new Blob([svgMarkup], {type:'image/svg+xml;charset=utf-8'});
-  const svgUrl = URL.createObjectURL(svgBlob);
-  const img = new Image();
-  img.onload = function(){
-    const pad = 24, titleH = 28;
-    const canvas = document.createElement('canvas');
-    canvas.width = svgWidth + pad*2;
-    canvas.height = svgHeight + pad*2 + titleH;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#333333';
-    ctx.font = '600 13px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillText('PEAK STONEWORKZ', canvas.width/2, pad/2);
-    ctx.drawImage(img, pad, titleH + pad/2);
-    URL.revokeObjectURL(svgUrl);
+  const pad = 24, titleH = 30;
+  const canvas = document.createElement('canvas');
+  canvas.width = barcodeCanvas.width + pad*2;
+  canvas.height = barcodeCanvas.height + pad*2 + titleH;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#333333';
+  ctx.font = '600 13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText('PEAK STONEWORKZ', canvas.width/2, pad/2);
+  ctx.drawImage(barcodeCanvas, pad, titleH + pad/2);
 
-    canvas.toBlob(function(blob){
-      const dlUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = dlUrl;
-      link.download = id + '-label.png';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(()=> URL.revokeObjectURL(dlUrl), 3000);
-    }, 'image/png');
-  };
-  img.onerror = function(){
-    URL.revokeObjectURL(svgUrl);
-    alert('Could not generate the label image. Please try again.');
-  };
-  img.src = svgUrl;
+  const dataUrl = canvas.toDataURL('image/png');
+
+  const modal = document.createElement('div');
+  modal.className = 'label-modal';
+  modal.innerHTML = `
+    <img src="${dataUrl}" alt="${id} barcode label">
+    <div class="modal-hint">Press and hold the label above, then choose <b>Save Image</b> to add it to Photos, or <b>Share</b> to print or send it.</div>
+    <button class="btn btn-primary" type="button" id="close-label-modal">Close</button>
+  `;
+  document.body.appendChild(modal);
+  document.getElementById('close-label-modal').addEventListener('click', ()=>{
+    document.body.removeChild(modal);
+  });
 }
 
 // ---------- Scan tab ----------
